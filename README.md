@@ -7,15 +7,17 @@ CssCompiler is a tool designed for compiling Counter-Strike: Sharp plugins, base
 - Update NuGet packages in your projects.
 - Automatically download the latest version of the compiler from GitHub releases.
 
+## Requirements
+- .NET 6.0 or higher must be installed on your system to run CssCompiler.
+
 ## Usage
 To use CssCompiler, follow these steps:
 
 1. Clone or download this repository to your local machine.
 
-2. Build the project using your preferred C# development environment.
+2. Build the project using your preferred C# development environment. Ensure that .NET 6.0 or higher is installed and used for the build process.
 
 3. Run the compiled executable in the command line with the following options:
-
    - To compile a specific project: `CssCompiler.exe <path_to_project_folder>`
    - To compile all projects in the current directory: `CssCompiler.exe`
 
