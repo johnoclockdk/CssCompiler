@@ -23,6 +23,8 @@ namespace Compiler
             var configManager = new ConfigurationManager();
             Config config = configManager.LoadConfig();
 
+            Console.WriteLine($"[Version{config.Version}] by johnoclock");
+
             if (config.Update)
             {
                 await UpdateFromGithub(config);
@@ -46,6 +48,9 @@ namespace Compiler
         private static async Task UpdateFromGithub(Config config)
         {
             string apiURL = $"https://api.github.com/repos/johnoclockdk/CssCompiler/releases/latest";
+            string tempFilePath = Path.Combine(Path.GetTempPath(), "newExecutable.exe");
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
+            string batchScriptPath = Path.Combine(Path.GetTempPath(), "updateScript.bat");
 
             using (var httpClient = new HttpClient())
             {
@@ -57,15 +62,15 @@ namespace Compiler
                     var latestRelease = JObject.Parse(response);
 
                     string latestVersion = latestRelease["tag_name"]!.ToString();
-                    Console.WriteLine("Latest Version: " + latestVersion);
 
                     Version latestVer = new Version(latestVersion);
                     Version currentVer = new Version(config.Version);
 
                     if (latestVer > currentVer)
                     {
+                        Console.WriteLine("Downloading Latest Version: " + latestVersion);
+
                         string downloadUrl = latestRelease["assets"]![0]!["browser_download_url"]!.ToString();
-                        string tempFilePath = Path.Combine(Path.GetTempPath(), "newExecutable.exe");
 
                         var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
                         using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -76,9 +81,19 @@ namespace Compiler
                         config.Version = latestVersion;
                         ConfigurationManager.SaveConfig(config);
 
+                        // Create a batch script for updating
+                        using (StreamWriter sw = new StreamWriter(batchScriptPath))
+                        {
+                            sw.WriteLine("@echo off");
+                            sw.WriteLine($"COPY /Y \"{tempFilePath}\" \"{currentExecutablePath}\"");
+                            sw.WriteLine($"DEL \"{tempFilePath}\"");
+                            sw.WriteLine($"START \"\" \"{currentExecutablePath}\"");
+                            sw.WriteLine($"DEL \"%~f0\"");
+                        }
 
-                        ReplaceExecutable(tempFilePath);
-                        RelaunchApplication();
+                        // Start the batch script and exit the application
+                        Process.Start(batchScriptPath);
+                        Environment.Exit(0);
                     }
                     else
                     {
@@ -90,41 +105,6 @@ namespace Compiler
                     Console.WriteLine("Error: " + ex.Message);
                 }
             }
-        }
-
-        private static void ReplaceExecutable(string newExecutablePath)
-        {
-            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
-            string backupExecutablePath = currentExecutablePath + ".bak";
-
-            try
-            {
-                // Backup the old executable
-                File.Copy(currentExecutablePath, backupExecutablePath, true);
-
-                // Replace the executable
-                File.Copy(newExecutablePath, currentExecutablePath, true);
-                File.Delete(newExecutablePath);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error during file replacement: {ex.Message}");
-                // Optional: Restore from backup if needed
-            }
-        }
-
-        private static void RelaunchApplication()
-        {
-            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
-
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = currentExecutablePath,
-                UseShellExecute = true
-            };
-
-            Process.Start(startInfo);
-            Environment.Exit(0);
         }
 
         private static void ProcessDirectory(string folderPath, Config config)
