@@ -22,7 +22,7 @@ To use CssCompiler, follow these steps:
 4. CssCompiler will scan the specified directory for C# projects (csproj files) and compile them, updating NuGet packages if necessary.
 
 ## Configuration
-You can configure CssCompiler by editing the `appsettings.json` file. Here are some key configuration options:
+You can configure CssCompiler by editing the `config.json` file. Here are some key configuration options:
 
 - `Version`: The current version of CssCompiler. //do not edit
 - `Update`: Set to `true` to automatically update CssCompiler from GitHub releases.
