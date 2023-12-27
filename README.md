@@ -1,6 +1,6 @@
 # CssCompiler
 
-CssCompiler is a tool designed for compiling Counter-Strike: Source plugins, based on the old Sourcemod compiler. This repository contains the source code for the CssCompiler application, which allows you to easily compile plugins for Counter-Strike: Source. Below, you'll find some information on how to use this tool and its key features.
+CssCompiler is a tool designed for compiling Counter-Strike: Sharp plugins, based on the old Sourcemod Compiler. This repository contains the source code for the CssCompiler application, which allows you to easily compile plugins for Counter-Strike 2. Below, you'll find some information on how to use this tool and its key features.
 
 ## Features
 - Compile Counter-Strike: Source plugins.
