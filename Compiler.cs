@@ -25,7 +25,7 @@ namespace Compiler
 
             if (config.Update)
             {
-                await UpdateFromGithub();
+                await UpdateFromGithub(config);
             }
 
             if (args.Length > 0)
@@ -43,32 +43,89 @@ namespace Compiler
             Console.WriteLine("Press Enter to exit...");
             Console.ReadLine();
         }
-        private static async Task UpdateFromGithub()
+        private static async Task UpdateFromGithub(Config config)
         {
-            string apiURL = $"https://api.github.com/repos/johnoclock/CssCompiler/releases/latest";
+            string apiURL = $"https://api.github.com/repos/johnoclockdk/CssCompiler/releases/latest";
 
             using (var httpClient = new HttpClient())
             {
-                httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");  // GitHub API requires a user-agent
+                httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
 
                 try
                 {
                     var response = await httpClient.GetStringAsync(apiURL);
                     var latestRelease = JObject.Parse(response);
 
-                    // Extract data as needed, for example, the tag name (version)
                     string latestVersion = latestRelease["tag_name"].ToString();
                     Console.WriteLine("Latest Version: " + latestVersion);
 
+                    Version latestVer = new Version(latestVersion);
+                    Version currentVer = new Version(config.Version);
 
+                    if (latestVer > currentVer)
+                    {
+                        string downloadUrl = latestRelease["assets"][0]["browser_download_url"].ToString();
+                        string tempFilePath = Path.Combine(Path.GetTempPath(), "newExecutable.exe");
+
+                        var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+                        using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            await downloadResponse.Content.CopyToAsync(fs);
+                        }
+
+                        config.Version = latestVersion;
+                        ConfigurationManager.SaveConfig(config);
+
+
+                        ReplaceExecutable(tempFilePath);
+                        RelaunchApplication();
+                    }
+                    else
+                    {
+                        Console.WriteLine("No update required. Running the latest version.");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error fetching latest release: " + ex.Message);
+                    Console.WriteLine("Error: " + ex.Message);
                 }
             }
         }
 
+        private static void ReplaceExecutable(string newExecutablePath)
+        {
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule.FileName;
+            string backupExecutablePath = currentExecutablePath + ".bak";
+
+            try
+            {
+                // Backup the old executable
+                File.Copy(currentExecutablePath, backupExecutablePath, true);
+
+                // Replace the executable
+                File.Copy(newExecutablePath, currentExecutablePath, true);
+                File.Delete(newExecutablePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during file replacement: {ex.Message}");
+                // Optional: Restore from backup if needed
+            }
+        }
+
+        private static void RelaunchApplication()
+        {
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule.FileName;
+
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = currentExecutablePath,
+                UseShellExecute = true
+            };
+
+            Process.Start(startInfo);
+            Environment.Exit(0);
+        }
 
         private static void ProcessDirectory(string folderPath, Config config)
         {
@@ -257,6 +314,5 @@ namespace Compiler
                 Console.WriteLine($"Error cleaning up artifacts: {ex.Message}");
             }
         }
-
     }
 }

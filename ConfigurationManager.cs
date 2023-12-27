@@ -32,5 +32,17 @@ namespace Compiler
                 return new Config();
             }
         }
+
+        public static void SaveConfig(Config config)
+        {
+            // Serialize the config object to JSON
+            string json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            // Write to the file
+            File.WriteAllText(ConfigFileName, json);
+        }
+
     }
 }
