@@ -56,7 +56,7 @@ namespace Compiler
                     var response = await httpClient.GetStringAsync(apiURL);
                     var latestRelease = JObject.Parse(response);
 
-                    string latestVersion = latestRelease["tag_name"].ToString();
+                    string latestVersion = latestRelease["tag_name"]!.ToString();
                     Console.WriteLine("Latest Version: " + latestVersion);
 
                     Version latestVer = new Version(latestVersion);
@@ -64,7 +64,7 @@ namespace Compiler
 
                     if (latestVer > currentVer)
                     {
-                        string downloadUrl = latestRelease["assets"][0]["browser_download_url"].ToString();
+                        string downloadUrl = latestRelease["assets"]![0]!["browser_download_url"]!.ToString();
                         string tempFilePath = Path.Combine(Path.GetTempPath(), "newExecutable.exe");
 
                         var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
@@ -94,7 +94,7 @@ namespace Compiler
 
         private static void ReplaceExecutable(string newExecutablePath)
         {
-            string currentExecutablePath = Process.GetCurrentProcess().MainModule.FileName;
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
             string backupExecutablePath = currentExecutablePath + ".bak";
 
             try
@@ -115,7 +115,7 @@ namespace Compiler
 
         private static void RelaunchApplication()
         {
-            string currentExecutablePath = Process.GetCurrentProcess().MainModule.FileName;
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
 
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -195,7 +195,7 @@ namespace Compiler
                     // Check if the Silencelog setting is false before logging
                     if (config.Silencelog != true)
                     {
-                        Console.WriteLine($"Update {file} package: {package}", ConsoleColor.Magenta);
+                        Console.WriteLine($"Update {file} package: {package}");
                     }
                     RunDotnetAddPackage(file, package, config);
                 }
