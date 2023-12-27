@@ -85,6 +85,7 @@ namespace Compiler
                         using (StreamWriter sw = new StreamWriter(batchScriptPath))
                         {
                             sw.WriteLine("@echo off");
+                            //sw.WriteLine("TIMEOUT /T 2 /NOBREAK");
                             sw.WriteLine($"COPY /Y \"{tempFilePath}\" \"{currentExecutablePath}\"");
                             sw.WriteLine($"DEL \"{tempFilePath}\"");
                             sw.WriteLine($"START \"\" \"{currentExecutablePath}\"");
