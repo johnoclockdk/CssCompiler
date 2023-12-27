@@ -15,11 +15,12 @@ To use CssCompiler, follow these steps:
 
 1. Clone or download this repository to your local machine.
 
-2. Build the project using your preferred C# development environment. Or download it from releases page Ensure that .NET 7.0 or higher is installed and used for the build process.
+2. Build the project using your preferred C# development environment. Ensure that .NET 7.0 or higher is installed and used for the build process.
 
-3. Run the compiled executable in the command line with the following options:
+3. Run the compiled executable in the command line with the following options, or use the drag-and-drop feature:
    - To compile a specific project: `CssCompiler.exe <path_to_project_folder>`
    - To compile all projects in the current directory: `CssCompiler.exe`
+   - Alternatively, you can drag and drop a project folder onto the CssCompiler executable to compile it.
 
 4. CssCompiler will scan the specified directory for C# projects (csproj files) and compile them, updating NuGet packages if necessary.
 
