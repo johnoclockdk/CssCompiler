@@ -23,7 +23,7 @@ namespace Compiler
             var configManager = new ConfigurationManager();
             Config config = configManager.LoadConfig();
 
-            Console.WriteLine($"[Version{config.Version}] by johnoclock");
+            Console.WriteLine($"[Version {config.Version}] by johnoclock");
 
             if (config.Update)
             {

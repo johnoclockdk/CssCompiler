@@ -8,6 +8,7 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <ApplicationIcon>logo.ico</ApplicationIcon>
+    <Optimization>true</Optimization>
   </PropertyGroup>
 
   <ItemGroup>
