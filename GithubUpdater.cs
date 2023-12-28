@@ -9,67 +9,103 @@ namespace Compiler
 {
     public class GithubUpdater
     {
-        public static async Task UpdateFromGithub(Config config)
+        private static readonly string ApiURL = "https://api.github.com/repos/johnoclockdk/CssCompiler/releases/latest";
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        static GithubUpdater()
         {
-            string apiURL = $"https://api.github.com/repos/johnoclockdk/CssCompiler/releases/latest";
-            string tempFilePath = Path.Combine(Path.GetTempPath(), "newExecutable.exe");
-            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
-            string batchScriptPath = Path.Combine(Path.GetTempPath(), "updateScript.bat");
+            httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
+        }
 
-            using (var httpClient = new HttpClient())
+        public static async Task UpdateFromGithubAsync(Config config)
+        {
+            try
             {
-                httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
+                var latestRelease = await GetLatestReleaseAsync();
+                var latestVersion = new Version(latestRelease["tag_name"]!.ToString());
 
-                try
+                if (IsUpdateRequired(config, latestVersion))
                 {
-                    var response = await httpClient.GetStringAsync(apiURL);
-                    var latestRelease = JObject.Parse(response);
+                    var tempFilePath = Path.GetTempFileName();
+                    await DownloadLatestVersionAsync(latestRelease, tempFilePath);
 
-                    string latestVersion = latestRelease["tag_name"]!.ToString();
+                    config.Version = latestVersion.ToString();
+                    ConfigurationManager.SaveConfig(config);
 
-                    Version latestVer = new Version(latestVersion);
-                    Version currentVer = new Version(config.Version);
-
-                    if (latestVer > currentVer)
-                    {
-                        Console.WriteLine("Downloading Latest Version: " + latestVersion);
-
-                        string downloadUrl = latestRelease["assets"]![0]!["browser_download_url"]!.ToString();
-
-                        var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
-                        using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            await downloadResponse.Content.CopyToAsync(fs);
-                        }
-
-                        config.Version = latestVersion;
-                        ConfigurationManager.SaveConfig(config);
-
-                        // Create a batch script for updating
-                        using (StreamWriter sw = new StreamWriter(batchScriptPath))
-                        {
-                            sw.WriteLine("@echo off");
-                            //sw.WriteLine("TIMEOUT /T 2 /NOBREAK");
-                            sw.WriteLine($"COPY /Y \"{tempFilePath}\" \"{currentExecutablePath}\"");
-                            sw.WriteLine($"DEL \"{tempFilePath}\"");
-                            sw.WriteLine($"START \"\" \"{currentExecutablePath}\"");
-                            sw.WriteLine($"DEL \"%~f0\"");
-                        }
-
-                        // Start the batch script and exit the application
-                        Process.Start(batchScriptPath);
-                        Environment.Exit(0);
-                    }
-                    else
-                    {
-                        Console.WriteLine("No update required. Running the latest version.");
-                    }
+                    await ApplyUpdateAsync(tempFilePath);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine("Error: " + ex.Message);
+                    Console.WriteLine("No update required. Running the latest version.");
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error updating: " + ex.Message);
+            }
+        }
+
+        private static bool IsUpdateRequired(Config config, Version latestVersion)
+        {
+            return latestVersion > new Version(config.Version);
+        }
+
+        private static async Task<JObject> GetLatestReleaseAsync()
+        {
+            var response = await httpClient.GetStringAsync(ApiURL);
+            return JObject.Parse(response);
+        }
+
+        private static async Task DownloadLatestVersionAsync(JObject latestRelease, string tempFilePath)
+        {
+            string downloadUrl = latestRelease["assets"]![0]!["browser_download_url"]!.ToString();
+
+            Console.WriteLine("Downloading Latest Version...");
+            using var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+            using var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            await CopyContentToStream(downloadResponse.Content, fs);
+        }
+
+        private static async Task CopyContentToStream(HttpContent content, FileStream fileStream)
+        {
+            var totalBytes = content.Headers.ContentLength ?? 0;
+            var buffer = new byte[8192];
+            var totalRead = 0L;
+            using var stream = await content.ReadAsStreamAsync();
+
+            int read;
+            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await fileStream.WriteAsync(buffer, 0, read);
+                totalRead += read;
+                Console.Write($"\rDownload progress: {totalRead * 100 / totalBytes}%");
+            }
+            Console.WriteLine("\nDownload Complete.");
+        }
+
+        private static async Task ApplyUpdateAsync(string tempFilePath)
+        {
+            string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
+            string backupExecutablePath = currentExecutablePath + ".bak";
+
+            // Rename current executable as a backup
+            File.Move(currentExecutablePath, backupExecutablePath);
+
+            // Move new executable to application path
+            File.Move(tempFilePath, currentExecutablePath);
+
+            // Restart application
+            ProcessStartInfo startInfo = new ProcessStartInfo(currentExecutablePath)
+            {
+                Arguments = "restart",
+                UseShellExecute = false
+            };
+
+            Process.Start(startInfo);
+
+            // Exit current application
+            Environment.Exit(0);
         }
     }
 }

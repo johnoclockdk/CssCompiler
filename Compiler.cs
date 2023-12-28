@@ -15,7 +15,7 @@ namespace Compiler
 
             if (config.Update)
             {
-                await GithubUpdater.UpdateFromGithub(config);
+                await GithubUpdater.UpdateFromGithubAsync(config);
             }
 
             if (args.Length > 0)
