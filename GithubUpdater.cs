@@ -73,6 +73,8 @@ namespace Compiler
             var totalBytes = content.Headers.ContentLength ?? 0;
             var buffer = new byte[8192];
             var totalRead = 0L;
+            var watch = Stopwatch.StartNew();
+
             using var stream = await content.ReadAsStreamAsync();
 
             int read;
@@ -80,10 +82,19 @@ namespace Compiler
             {
                 await fileStream.WriteAsync(buffer, 0, read);
                 totalRead += read;
-                Console.Write($"\rDownload progress: {totalRead * 100 / totalBytes}%");
+
+                var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
+                if (elapsedSeconds > 0)
+                {
+                    var downloadSpeed = totalRead / elapsedSeconds; // bytes per second
+                    Console.Write($"\rDownload progress: {totalRead * 100 / totalBytes}% ({downloadSpeed / 1024:F2} KB/s)");
+                }
             }
+
+            watch.Stop();
             Console.WriteLine("\nDownload Complete.");
         }
+
 
         private static void ApplyUpdate(string tempFilePath)
         {
