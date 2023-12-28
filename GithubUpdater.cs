@@ -89,17 +89,21 @@ namespace Compiler
             string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
             string backupExecutablePath = currentExecutablePath + ".bak";
 
-            // Check if backup executable already exists and delete it
-            if (File.Exists(backupExecutablePath))
+            // Asynchronously wait for the file move to complete
+            await Task.Run(() =>
             {
-                File.Delete(backupExecutablePath);
-            }
+                // Check if backup executable already exists and delete it
+                if (File.Exists(backupExecutablePath))
+                {
+                    File.Delete(backupExecutablePath);
+                }
 
-            // Rename current executable as a backup
-            File.Move(currentExecutablePath, backupExecutablePath, true);
+                // Rename current executable as a backup
+                File.Move(currentExecutablePath, backupExecutablePath, true);
 
-            // Move new executable to application path, overwrite if existing
-            File.Move(tempFilePath, currentExecutablePath, true);
+                // Move new executable to application path, overwrite if existing
+                File.Move(tempFilePath, currentExecutablePath, true);
+            });
 
             // Restart application
             ProcessStartInfo startInfo = new ProcessStartInfo(currentExecutablePath)
