@@ -32,7 +32,7 @@ namespace Compiler
                     config.Version = latestVersion.ToString();
                     ConfigurationManager.SaveConfig(config);
 
-                    await ApplyUpdateAsync(tempFilePath);
+                    ApplyUpdate(tempFilePath);
                 }
                 else
                 {
@@ -58,9 +58,10 @@ namespace Compiler
 
         private static async Task DownloadLatestVersionAsync(JObject latestRelease, string tempFilePath)
         {
+            string latestVersion = latestRelease["tag_name"]!.ToString();
             string downloadUrl = latestRelease["assets"]![0]!["browser_download_url"]!.ToString();
 
-            Console.WriteLine("Downloading Latest Version...");
+            Console.WriteLine("Downloading Latest Version: " + latestVersion);
             using var downloadResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
             using var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
 
@@ -84,38 +85,24 @@ namespace Compiler
             Console.WriteLine("\nDownload Complete.");
         }
 
-        private static async Task ApplyUpdateAsync(string tempFilePath)
+        private static void ApplyUpdate(string tempFilePath)
         {
             string currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
-            string backupExecutablePath = currentExecutablePath + ".bak";
+            string batchScriptPath = Path.GetTempFileName() + ".bat";
 
-            // Asynchronously wait for the file move to complete
-            await Task.Run(() =>
-            {
-                // Check if backup executable already exists and delete it
-                if (File.Exists(backupExecutablePath))
-                {
-                    File.Delete(backupExecutablePath);
-                }
-
-                // Rename current executable as a backup
-                File.Move(currentExecutablePath, backupExecutablePath, true);
-
-                // Move new executable to application path, overwrite if existing
-                File.Move(tempFilePath, currentExecutablePath, true);
-            });
-
-            // Restart application
-            ProcessStartInfo startInfo = new ProcessStartInfo(currentExecutablePath)
-            {
-                Arguments = "restart",
-                UseShellExecute = false
-            };
-
-            Process.Start(startInfo);
-
-            // Exit current application
+            CreateBatchUpdateScript(batchScriptPath, tempFilePath, currentExecutablePath);
+            Process.Start(batchScriptPath);
             Environment.Exit(0);
+        }
+
+        private static void CreateBatchUpdateScript(string batchScriptPath, string tempFilePath, string currentExecutablePath)
+        {
+            using var sw = new StreamWriter(batchScriptPath);
+            sw.WriteLine("@echo off");
+            sw.WriteLine($"COPY /Y \"{tempFilePath}\" \"{currentExecutablePath}\"");
+            sw.WriteLine($"DEL \"{tempFilePath}\"");
+            sw.WriteLine($"START \"\" \"{currentExecutablePath}\"");
+            sw.WriteLine($"DEL \"%~f0\"");
         }
     }
 }
