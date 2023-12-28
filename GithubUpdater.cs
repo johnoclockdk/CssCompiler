@@ -16,7 +16,6 @@ namespace Compiler
         {
             httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd("request");
         }
-
         public static async Task UpdateFromGithubAsync(Config config)
         {
             try
